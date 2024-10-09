@@ -1,0 +1,85 @@
+version: "3.8"
+
+services:
+
+  fastapi:
+    build:
+      context: ./fastapi
+      dockerfile: Dockerfile
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    # environment:
+    #   - API_KEY="EMPTY"
+    expose:
+      - 8000
+    restart: always
+
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    ports:
+      - 80:80
+    restart: always
+
+
+  vlm-qwen2-vl-7b:
+    image: christtzm/nv_dev:cuda12.4-vllm-v1.0
+    container_name: vlm-qwen2-vl-7b
+    runtime: nvidia
+    ipc: host
+    volumes:
+      - ${MODEL_PATH:-/home/tzm/tzm/models}:/models
+      - ./deploy_script:/app
+    ports:
+      - "8022:8022"
+    command: zsh -c "zsh app/start_qwen2_vl_7B.sh"
+    restart: always
+
+
+  llm-qwen2_5-72b-int4-2gpu:
+    image: christtzm/nv_dev:cuda12.4-vllm-v1.0
+    container_name: llm-qwen2_5-72b-int4-2gpu
+    runtime: nvidia
+    ipc: host
+    volumes:
+      - ${MODEL_PATH:-/home/tzm/tzm/models}:/models
+      - ./deploy_script:/app
+    ports:
+      - "8012:8012"
+    command: zsh -c "zsh app/start_qwen2_5_72B_in4_2gpu.sh"
+    restart: always
+    deploy:
+      replicas: ${LLM_2GPU_REPLICAS:-1}
+
+
+  llm-qwen2_5-72b-int4:
+    image: christtzm/nv_dev:cuda12.4-vllm-v1.0
+    container_name: llm-qwen2_5-72b-int4
+    runtime: nvidia
+    ipc: host
+    volumes:
+      - ${MODEL_PATH:-/home/tzm/tzm/models}:/models
+      - ./deploy_script:/app
+    ports:
+      - "8012:8012"
+    command: zsh -c "zsh app/start_qwen2_5_72B_in4.sh"
+    restart: always
+    deploy:
+      replicas: ${LLM_4GPU_REPLICAS:-0}
+
+
+  embed-gte-qwen2-7b:
+    image: christtzm/nv_dev:cuda12.4-sglang-v1.0
+    container_name: embed-gte-qwen2-7b
+    runtime: nvidia
+    ipc: host
+    volumes:
+      - ${MODEL_PATH:-/home/tzm/tzm/models}:/models
+      - ./deploy_script:/app
+    ports:
+      - "8112:8112"
+    command: zsh -c "zsh app/start_gte_qwen2_7B.sh"
+    restart: always
+
+
