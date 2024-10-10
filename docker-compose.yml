@@ -7,6 +7,8 @@ services:
       context: ./fastapi
       dockerfile: Dockerfile
     command: uvicorn main:app --host 0.0.0.0 --port 8000
+    volumes:
+      - ./uploaded_images:/app/uploaded_images
     # environment:
     #   - API_KEY="EMPTY"
     expose:

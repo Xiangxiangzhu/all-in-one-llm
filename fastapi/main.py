@@ -4,9 +4,10 @@ import time
 import os
 from typing import Optional, Union, Annotated
 
-from fastapi import FastAPI, Request, HTTPException, Security, Depends
+from fastapi import FastAPI, Request, HTTPException, Security, Depends, File, UploadFile
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import Response
+from fastapi.staticfiles import StaticFiles
 
 from routers.embed import router as EmbRouter
 from routers.vllm import router as VllmRouter
@@ -27,12 +28,10 @@ auth_scheme = HTTPBearer(scheme_name="API key")
 API_KEY = os.getenv("API_KEY")
 
 if not API_KEY:
-    print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
     def check_api_key():
         pass
 
 else:
-    print("rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr")
     def check_api_key(api_key: Annotated[HTTPAuthorizationCredentials, Depends(auth_scheme)]):
         if api_key.scheme != "Bearer":
             raise HTTPException(status_code=403, detail="Invalid authentication scheme")
@@ -42,12 +41,33 @@ else:
         return api_key.credentials
 
 
+# image upload dir
+UPLOAD_DIRECTORY = "./uploaded_images"
+os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
+app.mount("/images", StaticFiles(directory=UPLOAD_DIRECTORY), name="images")
+
+
+@app.post("/upload-image/")
+async def upload_image(file: UploadFile = File(...)):
+    file_location = os.path.join(UPLOAD_DIRECTORY, file.filename)
+    with open(file_location, "wb") as f:
+        f.write(await file.read())
+    return {"info": f"Image '{file.filename}' uploaded successfully.", "url": f"/images/{file.filename}"}
+
+@app.get("/images/{filename}")
+async def get_image(filename: str):
+    file_path = os.path.join(UPLOAD_DIRECTORY, filename)
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    else:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+
 @app.get("/health")
 def health_check(request: Request, api_key: str = Security(check_api_key)) -> Response:
     """
     Health check of vLLM model and embedding embeddings.
     """
-    print("fffffffffffffffffffffffffffffffffffff")
     response = requests.get(f"{LLM_URL}/health")
     llm_status = response.status_code
 

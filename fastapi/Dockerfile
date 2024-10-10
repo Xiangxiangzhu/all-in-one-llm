@@ -9,4 +9,3 @@ RUN mkdir -p ~/.config/pip && \
     pip install --upgrade pip && pip install --no-cache-dir .
 
 ADD . .
-
