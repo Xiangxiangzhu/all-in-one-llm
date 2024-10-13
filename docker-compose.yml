@@ -26,7 +26,7 @@ services:
 
 
   vlm-qwen2-vl-7b:
-    image: christtzm/nv_dev:cuda12.4-vllm-v1.0
+    image: christtzm/nv_dev:cuda12.4-vllm-v1.1
     container_name: vlm-qwen2-vl-7b
     runtime: nvidia
     ipc: host
