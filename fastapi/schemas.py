@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from openai.types import Model
 
 class CustomModel(Model):
-    type: Literal["text-generation", "text-embeddings-inference"]  # Huggingface tags
+    type: Literal["text-generation", "text-embeddings-inference", "image-text-inference", "audio-text-inference"]
 
 
 class Models(BaseModel):

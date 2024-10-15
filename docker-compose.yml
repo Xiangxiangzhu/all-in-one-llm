@@ -8,9 +8,13 @@ services:
       dockerfile: Dockerfile
     command: uvicorn main:app --host 0.0.0.0 --port 8000
     volumes:
-      - ./uploaded_images:/app/uploaded_images
-    # environment:
-    #   - API_KEY="EMPTY"
+      - ./uploaded_files:/app/uploaded_files
+    environment:
+      - LLM_1GPU_REPLICAS=${LLM_1GPU_REPLICAS}
+      - LLM_2GPU_REPLICAS=${LLM_2GPU_REPLICAS}
+      - LLM_4GPU_REPLICAS=${LLM_4GPU_REPLICAS}
+      - ALM_REPLICAS=${ALM_REPLICAS}
+      - CODE_LLM_REPLICAS=${CODE_LLM_REPLICAS}
     expose:
       - 8000
     restart: always
@@ -20,6 +24,8 @@ services:
     build:
       context: ./nginx
       dockerfile: Dockerfile
+    env_file:
+      - ./env
     ports:
       - 80:80
     restart: always
@@ -39,6 +45,22 @@ services:
     restart: always
 
 
+  llm-qwen2_5-7b:
+    image: christtzm/nv_dev:cuda12.4-vllm-v1.0
+    container_name: llm-qwen2_5-7b
+    runtime: nvidia
+    ipc: host
+    volumes:
+      - ${MODEL_PATH:-/home/tzm/tzm/models}:/models
+      - ./deploy_script:/app
+    ports:
+      - "8012:8012"
+    command: zsh -c "zsh app/start_qwen2_5_7B.sh"
+    restart: always
+    deploy:
+      replicas: ${LLM_1GPU_REPLICAS:-0}
+
+
   llm-qwen2_5-72b-int4-2gpu:
     image: christtzm/nv_dev:cuda12.4-vllm-v1.0
     container_name: llm-qwen2_5-72b-int4-2gpu
@@ -52,7 +74,7 @@ services:
     command: zsh -c "zsh app/start_qwen2_5_72B_in4_2gpu.sh"
     restart: always
     deploy:
-      replicas: ${LLM_2GPU_REPLICAS:-1}
+      replicas: ${LLM_2GPU_REPLICAS:-0}
 
 
   llm-qwen2_5-72b-int4:
@@ -71,6 +93,38 @@ services:
       replicas: ${LLM_4GPU_REPLICAS:-0}
 
 
+  llm-qwen2_5-code-7b:
+    image: christtzm/nv_dev:cuda12.4-vllm-v1.0
+    container_name: llm-qwen2_5-code-7b
+    runtime: nvidia
+    ipc: host
+    volumes:
+      - ${MODEL_PATH:-/home/tzm/tzm/models}:/models
+      - ./deploy_script:/app
+    ports:
+      - "8012:8012"
+    command: zsh -c "zsh app/start_qwen2_5_code_7B.sh"
+    restart: always
+    deploy:
+      replicas: ${CODE_LLM_REPLICAS:-0}
+
+
+  llm-qwen2-audio-7b:
+    image: christtzm/nv_dev:cuda12.4-vllm-v1.1-audio
+    container_name: llm-qwen2-audio-7b
+    runtime: nvidia
+    ipc: host
+    volumes:
+      - ${MODEL_PATH:-/home/tzm/tzm/models}:/models
+      - ./deploy_script:/app
+    ports:
+      - "8032:8032"
+    command: zsh -c "zsh app/start_qwen2_audio_7B.sh"
+    restart: always
+    deploy:
+      replicas: ${ALM_REPLICAS:-0}
+
+
   embed-gte-qwen2-7b:
     image: christtzm/nv_dev:cuda12.4-sglang-v1.0
     container_name: embed-gte-qwen2-7b
@@ -83,5 +137,4 @@ services:
       - "8112:8112"
     command: zsh -c "zsh app/start_gte_qwen2_7B.sh"
     restart: always
-
 
