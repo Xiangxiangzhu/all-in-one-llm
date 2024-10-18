@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from routers.embed import router as EmbRouter
 from routers.vllm import router as VllmRouter
+from routers.whisper_cpp import router as WhisperRouter
 from schemas import CustomModel, Models, FreeFormJSON
 
 
@@ -21,13 +22,15 @@ llm_2gpu_replicas = int(os.getenv('LLM_2GPU_REPLICAS', '0') or '0')
 llm_4gpu_replicas = int(os.getenv('LLM_4GPU_REPLICAS', '0') or '0')
 alm_replicas = int(os.getenv('ALM_REPLICAS', '0') or '0')
 code_llm_replicas = int(os.getenv('CODE_LLM_REPLICAS', '0') or '0')
+whisper_replicas = int(os.getenv('ASR_REPLICAS', '0') or '0')
 
 print("################################")
-print(llm_1gpu_replicas)
-print(llm_2gpu_replicas)
-print(llm_4gpu_replicas)
-print(alm_replicas)
-print(code_llm_replicas)
+print("llm_1gpu_replicas", llm_1gpu_replicas)
+print("llm_2gpu_replicas", llm_2gpu_replicas)
+print("llm_4gpu_replicas", llm_4gpu_replicas)
+print("alm_replicas", alm_replicas)
+print("code_llm_replicas", code_llm_replicas)
+print("whisper_replicas", whisper_replicas)
 print("################################")
 
 if llm_1gpu_replicas > 0:
@@ -44,7 +47,7 @@ else:
 VLM_URL = "http://vlm-qwen2-vl-7b:8022"
 EMB_URL = "http://embed-gte-qwen2-7b:8112"
 ALM_URL = "http://llm-qwen2-audio-7b:8032"
-
+ASR_URL = "http://whisper-large-v3:8132"
 
 # auth
 auth_scheme = HTTPBearer(scheme_name="API key")
@@ -104,9 +107,19 @@ def health_check(request: Request, api_key: str = Security(check_api_key)) -> Re
         response = requests.get(f"{ALM_URL}/health")
         alm_status = response.status_code
 
+    if whisper_replicas:
+        response = requests.get(f"{ASR_URL}")
+        asr_status = response.status_code
+
     if llm_status == 200 and vlm_status == 200 and emb_status == 200:
-        if alm_replicas:
+        if alm_replicas and whisper_replicas:
+            if alm_status == 200 and asr_status == 200:
+                return Response(status_code=200)
+        elif alm_replicas:
             if alm_status == 200:
+                return Response(status_code=200)
+        elif whisper_replicas:
+            if asr_status == 200:
                 return Response(status_code=200)
         else:
             return Response(status_code=200)
@@ -126,6 +139,7 @@ def get_models(
     llm_model = requests.get(f"{LLM_URL}/v1/models", headers=headers).json()
     vlm_model = requests.get(f"{VLM_URL}/v1/models", headers=headers).json()
     emb_model = requests.get(f"{EMB_URL}/v1/models", headers=headers).json()
+
     if alm_replicas:
         alm_model = requests.get(f"{ALM_URL}/v1/models", headers=headers).json()
 
@@ -136,6 +150,7 @@ def get_models(
         "created": llm_model["data"][0]["created"],
         "type": "text-generation",
     }
+
     vlm_model_data = {
         "id": vlm_model["data"][0]["id"],
         "object": "model",
@@ -143,6 +158,7 @@ def get_models(
         "created": vlm_model["data"][0]["created"],
         "type": "image-text-inference",
     }
+
     emb_model_data = {
         "id": emb_model["data"][0]["id"],
         "object": "model",
@@ -150,9 +166,10 @@ def get_models(
         "created": round(time.time()),
         "type": "text-embeddings-inference",
     }
+
     if alm_replicas:
         alm_model_data = {
-            "id": emb_model["data"][0]["id"],
+            "id": alm_model["data"][0]["id"],
             "object": "model",
             "owned_by": "vllm",
             "created": alm_model["data"][0]["created"],
@@ -160,17 +177,36 @@ def get_models(
         }
     else:
         alm_model_data = {
-            "id": None,
-            "object": None,
-            "owned_by": None,
-            "created": None,
-            "type": None,
+            "id": "None",
+            "object": "model",
+            "owned_by": "None",
+            "created": 0,
+            "type": "audio-text-inference",
         }
+
+    if whisper_replicas:
+        asr_model_data = {
+            "id": "whisper",
+            "object": "model",
+            "owned_by": "whisper.cpp",
+            "created": round(time.time()),
+            "type": "audio-text-inference",
+        }
+    else:
+        asr_model_data = {
+            "id": "None",
+            "object": "model",
+            "owned_by": "None",
+            "created": 0,
+            "type": "audio-text-inference",
+        }
+
 
     if model is not None:
         # support double encoding for model ID with "/" character
         model = urllib.parse.unquote(urllib.parse.unquote(model))
-        if model not in [llm_model_data["id"], vlm_model_data["id"], emb_model_data["id"], alm_model_data["id"]]:
+        if model not in [llm_model_data["id"], vlm_model_data["id"],
+                         emb_model_data["id"], alm_model_data["id"], asr_model_data["id"]]:
             raise HTTPException(status_code=404, detail="Model not found")
 
         if model == llm_model_data["id"]:
@@ -179,10 +215,12 @@ def get_models(
             return vlm_model_data
         elif model == alm_model_data["id"]:
             return alm_model_data
+        elif model == asr_model_data["id"]:
+            return asr_model_data
         else:
             return emb_model_data
 
-    response = {"object": "list", "data": [llm_model_data, vlm_model_data, emb_model_data, alm_model_data]}
+    response = {"object": "list", "data": [llm_model_data, vlm_model_data, emb_model_data, alm_model_data, asr_model_data]}
 
     return response
 
@@ -204,3 +242,6 @@ def chat_completions(request: FreeFormJSON):
 # routers
 app.include_router(VllmRouter)
 app.include_router(EmbRouter)
+app.include_router(WhisperRouter)
+
+

@@ -14,9 +14,12 @@ services:
       - LLM_2GPU_REPLICAS=${LLM_2GPU_REPLICAS}
       - LLM_4GPU_REPLICAS=${LLM_4GPU_REPLICAS}
       - ALM_REPLICAS=${ALM_REPLICAS}
+      - ASR_REPLICAS=${ASR_REPLICAS}
       - CODE_LLM_REPLICAS=${CODE_LLM_REPLICAS}
-    expose:
-      - 8000
+    # expose:
+    #   - 8000
+    ports:
+      - 8000:8000
     restart: always
 
 
@@ -110,7 +113,7 @@ services:
 
 
   llm-qwen2-audio-7b:
-    image: christtzm/nv_dev:cuda12.4-vllm-v1.1-audio
+    image: christtzm/nv_dev:cuda12.4-vllm-v1.0
     container_name: llm-qwen2-audio-7b
     runtime: nvidia
     ipc: host
@@ -125,6 +128,22 @@ services:
       replicas: ${ALM_REPLICAS:-0}
 
 
+  whisper-large-v3:
+    image: christtzm/nv_dev:cuda12.4-whisper-v1.0
+    container_name: whisper-large-v3
+    runtime: nvidia
+    ipc: host
+    volumes:
+      - ${MODEL_PATH:-/home/tzm/tzm/models}:/models
+      - ./deploy_script:/src
+    ports:
+      - "8132:8132"
+    command: zsh -c "zsh src/start_whisper_large_v3.sh"
+    restart: always
+    deploy:
+      replicas: ${ASR_REPLICAS:-0}
+
+
   embed-gte-qwen2-7b:
     image: christtzm/nv_dev:cuda12.4-sglang-v1.0
     container_name: embed-gte-qwen2-7b
@@ -137,4 +156,5 @@ services:
       - "8112:8112"
     command: zsh -c "zsh app/start_gte_qwen2_7B.sh"
     restart: always
+
 
