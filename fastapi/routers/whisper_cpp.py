@@ -8,10 +8,10 @@ from schemas import FreeFormJSON
 router = APIRouter(prefix="/whisper", tags=["whisper.cpp"])
 
 @router.get("/inference")
-def health_check(request: Request):
+def audio_to_text(request: Request):
     pass # for display endpoint in swagger
 
 @router.get("/load")
-def get_models(request: Request):
+def load_model(request: Request):
     pass # for display endpoint in swagger
 
