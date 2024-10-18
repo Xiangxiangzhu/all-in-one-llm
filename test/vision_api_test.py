@@ -28,10 +28,10 @@ t1 = time.time()
 models = client.models.list()
 print("models are: ", models)
 # model = models.data[0].id
-model = "Qwen/Qwen2-VL-7B-Instruct"
+model = "Qwen/VLM"
 
 # Single-image input inference
-image_url = "http://10.23.56.12/images/test1.jpg"
+image_url = "http://10.23.56.12/files/test1.jpg"
 
 # # Use image url in the payload
 chat_completion_from_url = client.chat.completions.create(
@@ -99,8 +99,8 @@ print(time.time() - t1)
 t2 = time.time()
 
 # # Multi-image input inference
-image_url_duck = "http://10.23.56.12/images/test2.jpg"
-image_url_lion = "http://10.23.56.12/images/test3-.jpg"
+image_url_duck = "http://10.23.56.12/files/test2.jpg"
+image_url_lion = "http://10.23.56.12/files/test3-.jpg"
 chat_completion_from_url = client.chat.completions.create(
     messages=[{
         "role":

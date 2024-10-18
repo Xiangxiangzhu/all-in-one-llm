@@ -14,7 +14,7 @@ client = OpenAI(
 t1 = time.time()
 models = client.models.list()
 # model = models.data[0].id
-model = "Qwen/Qwen2_5-72B-Instruct-GPTQ-Int4"
+model = "Qwen/LLM"
 
 # # test chat
 chat_completion = client.chat.completions.create(
@@ -39,7 +39,7 @@ print(t2 - t1)
 
 # test completion
 completion = client.completions.create(
-    model="Qwen/Qwen2_5-72B-Instruct-GPTQ-Int4",
+    model=model,
     prompt="San Francisco is a",
     max_tokens=7,
     temperature=0

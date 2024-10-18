@@ -17,7 +17,7 @@ model = models.data[0].id
 # # test emb
 response = client.embeddings.create(
     input="The food was delicious and the waiter...",
-    model="Alibaba-NLP/gte-Qwen2-1.5B-instruct",
+    model="Qwen/EMB",
     encoding_format="float"
 )
 
