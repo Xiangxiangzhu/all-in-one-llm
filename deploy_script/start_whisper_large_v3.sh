@@ -5,7 +5,6 @@ source ~/.zshrc
 unset http_proxy
 unset https_proxy
 
-
 CUDA_VISIBLE_DEVICES=3 /app/server \
 	-pc \
 	-pr \
