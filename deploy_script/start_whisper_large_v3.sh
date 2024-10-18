@@ -1,7 +1,7 @@
 #!/bin/bash
 
 source ~/.zshrc
-conda activate sglang-infer
+
 unset http_proxy
 unset https_proxy
 
